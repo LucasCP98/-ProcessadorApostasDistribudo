@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "NestJS: start:dev (Bun)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "start:dev"],
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3000",
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/wagering_db",
+        "POSTGRES_SSL": "false",
+        "SQS_ENDPOINT": "http://localhost:4566",
+        "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "test",
+        "AWS_SECRET_ACCESS_KEY": "test",
+        "SQS_WORKERS_ENABLED": "true",
+        "SQS_QUEUES_AUTO_CREATE": "true",
+        "SQS_WAGER_QUEUE_NAME": "wager-transactions.fifo",
+        "SQS_WAGER_DLQ_NAME": "wager-transactions-dlq.fifo",
+        "SQS_EVENT_QUEUE_NAME": "wagering-events"
+      }
+    }
+  ]
+}
