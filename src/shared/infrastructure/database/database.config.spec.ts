@@ -17,7 +17,7 @@ describe('database configuration', () => {
     expect(development).toMatchObject({
       dbName: 'wagering_db',
       host: 'localhost',
-      port: 5432,
+      port: 5433,
       user: 'postgres',
       password: 'postgres',
       debug: true,

@@ -1,5 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+import {
+  HealthCheck,
+  HealthCheckService,
+  HealthIndicatorService,
+} from '@nestjs/terminus';
 import { EntityManager } from '@mikro-orm/core';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SqsMessagingService } from '../messaging/sqs-messaging.service.js';
@@ -9,6 +13,7 @@ import { SqsMessagingService } from '../messaging/sqs-messaging.service.js';
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
+    private readonly healthIndicator: HealthIndicatorService,
     private readonly em: EntityManager,
     private readonly messaging: SqsMessagingService,
   ) {}
@@ -34,14 +39,18 @@ export class HealthController {
   })
   readiness() {
     return this.health.check([
-      async () => {
-        await this.em.getConnection().execute('select 1');
-        return { database: { status: 'up' } };
-      },
-      async () => {
-        await this.messaging.checkReadiness();
-        return { sqs: { status: 'up' } };
-      },
+      this.healthIndicator
+        .check('database')
+        .attempt(async () => {
+          await this.em.getConnection().execute('select 1');
+        })
+        .withFailureData(() => ({ message: 'PostgreSQL is unavailable' })),
+      this.healthIndicator
+        .check('sqs')
+        .attempt(async () => {
+          await this.messaging.checkReadiness();
+        })
+        .withFailureData(() => ({ message: 'SQS is unavailable' })),
     ]);
   }
 }

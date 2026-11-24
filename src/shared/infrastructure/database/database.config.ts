@@ -79,7 +79,7 @@ export function createDatabaseOptions(
         port: readIntegerEnvironmentVariable(
           environment,
           'POSTGRES_PORT',
-          5432,
+          5433,
           1,
           65535,
         ),

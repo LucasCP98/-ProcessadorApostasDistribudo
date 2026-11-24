@@ -7,19 +7,16 @@
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "start:dev"],
+      "runtimeArgs": [
+        "run",
+        "start:dev"
+      ],
       "console": "integratedTerminal",
       "autoAttachChildProcesses": true,
-      "serverReadyAction": {
-        "pattern": "Nest application successfully started",
-        "uriFormat": "http://localhost:3000/docs",
-        "action": "debugWithChrome",
-        "webRoot": "${workspaceFolder}"
-      },
       "env": {
         "NODE_ENV": "development",
         "PORT": "3000",
-        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/wagering_db",
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5433/wagering_db",
         "POSTGRES_SSL": "false",
         "SQS_ENDPOINT": "http://localhost:4566",
         "AWS_REGION": "us-east-1",

@@ -13,11 +13,13 @@ Serviço em NestJS para processamento de apostas em carteira com PostgreSQL, raz
 bun install
 docker compose up -d
 $env:NODE_ENV = "development"
-$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/wagering_db"
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/wagering_db"
 $env:SQS_ENDPOINT = "http://localhost:4566"
 bun run db:migrate
 bun run start:dev
 ```
+
+A aplicação abre automaticamente a UI do Swagger em ambientes não produtivos ao iniciar com `bun run start` ou `bun run start:dev`, em `http://localhost:3000/docs` (ou na porta definida por `PORT`). Em produção, o Swagger fica desativado.
 
 A aplicação lê variáveis de ambiente do processo; ela não carrega arquivos `.env` por conta própria. Veja o [.env.example](./.env.example) para valores apenas locais. Nunca copie suas credenciais para *staging* ou produção.
 
