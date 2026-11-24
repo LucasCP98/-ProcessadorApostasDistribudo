@@ -15,6 +15,14 @@ import {
   ProcessWagerHandler,
   ProcessWagerCommand,
 } from '../../application/commands/process-wager.handler.js';
+import {
+  ApiHeader,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { hashWagerPayload } from '../../application/commands/wager-payload.js';
 import { CreateWalletHandler } from '../../application/commands/create-wallet.handler.js';
 import { WageringQueriesHandler } from '../../application/queries/wagering-queries.handler.js';
@@ -27,6 +35,7 @@ import {
 import { SqsMessagingService } from '../../../shared/infrastructure/messaging/sqs-messaging.service.js';
 import { sqsCommandsEnqueued } from '../../../shared/infrastructure/observability/metrics-registry.js';
 
+@ApiTags('Wagering')
 @Controller('wagering')
 export class WageringController {
   constructor(
@@ -38,6 +47,20 @@ export class WageringController {
 
   @Post('wallets')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a wallet' })
+  @ApiHeader({
+    name: 'X-Correlation-Id',
+    required: false,
+    description: 'Optional correlation identifier.',
+  })
+  @ApiHeader({
+    name: 'X-Causation-Id',
+    required: false,
+    description: 'Optional causation identifier.',
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Wallet created.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid body or header.' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'Wallet already exists.' })
   async createWallet(
     @Body() dto: CreateWalletDto,
     @Headers('x-correlation-id') correlationId: string,
@@ -55,6 +78,18 @@ export class WageringController {
 
   @Post('transactions')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Process a wager transaction synchronously' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description:
+      'Optional key. Defaults to providerId:externalTransactionId and must not exceed 128 characters.',
+  })
+  @ApiHeader({ name: 'X-Correlation-Id', required: false })
+  @ApiHeader({ name: 'X-Causation-Id', required: false })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Transaction processed or replayed.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid payload.' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'Idempotency payload conflict.' })
   async processTransaction(
     @Headers('idempotency-key') headerIdempotencyKey: string,
     @Headers('x-correlation-id') correlationId: string,
@@ -80,6 +115,17 @@ export class WageringController {
 
   @Post('transactions/queue')
   @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue a wager transaction for asynchronous processing' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description:
+      'Optional key. Defaults to providerId:externalTransactionId and must not exceed 128 characters.',
+  })
+  @ApiHeader({ name: 'X-Correlation-Id', required: false })
+  @ApiHeader({ name: 'X-Causation-Id', required: false })
+  @ApiResponse({ status: HttpStatus.ACCEPTED, description: 'Command accepted by SQS.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid payload or header.' })
   async queueTransaction(
     @Headers('idempotency-key') headerIdempotencyKey: string,
     @Headers('x-correlation-id') correlationId: string,
@@ -99,11 +145,21 @@ export class WageringController {
   }
 
   @Get('wallets/:walletId')
+  @ApiOperation({ summary: 'Get wallet state' })
+  @ApiParam({ name: 'walletId', description: 'Wallet identifier.', example: 'wallet-001' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Wallet state.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Wallet not found.' })
   async getWallet(@Param('walletId') walletId: string) {
     return this.queries.getWallet(walletId);
   }
 
   @Get('wallets/:walletId/ledger')
+  @ApiOperation({ summary: 'Get wallet ledger entries' })
+  @ApiParam({ name: 'walletId', description: 'Wallet identifier.', example: 'wallet-001' })
+  @ApiQuery({ name: 'limit', required: false, type: String, example: '100' })
+  @ApiQuery({ name: 'offset', required: false, type: String, example: '0' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Paged ledger entries.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Wallet not found.' })
   async getLedger(
     @Param('walletId') walletId: string,
     @Query() query: LedgerQueryDto,
@@ -114,12 +170,18 @@ export class WageringController {
   }
 
   @Get('transactions/:transactionId')
+  @ApiOperation({ summary: 'Get a wager transaction' })
+  @ApiParam({ name: 'transactionId', description: 'Transaction identifier.' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Transaction state.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Transaction not found.' })
   async getTransaction(@Param('transactionId') transactionId: string) {
     return this.queries.getTransaction(transactionId);
   }
 
   @Post('reconcile')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reconcile wallets without changing balances' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Reconciliation result.' })
   async reconcile(@Body() dto?: ReconciliationDto) {
     return this.queries.reconcile(dto?.walletId);
   }
@@ -183,12 +245,17 @@ function normalizeTraceId(
   return traceId;
 }
 
+@ApiTags('Reconciliation')
 @Controller('wallets')
 export class WalletReconciliationController {
   constructor(private readonly queries: WageringQueriesHandler) {}
 
   @Post(':walletId/reconciliation')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reconcile one wallet without changing balances' })
+  @ApiParam({ name: 'walletId', description: 'Wallet identifier.', example: 'wallet-001' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Single-wallet reconciliation result.' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Wallet not found.' })
   async reconcileWallet(@Param('walletId') walletId: string) {
     return this.queries.reconcileWallet(walletId);
   }

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Observable, finalize } from 'rxjs';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   httpRequestDuration,
   httpRequests,
@@ -37,10 +38,21 @@ export class HttpMetricsInterceptor implements NestInterceptor {
   }
 }
 
+@ApiTags('Observability')
 @Controller('metrics')
 export class MetricsController {
   @Get()
   @Header('Content-Type', register.contentType)
+  @ApiOperation({ summary: 'Expose Prometheus metrics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Prometheus text metrics.',
+    content: {
+      'text/plain': {
+        schema: { type: 'string' },
+      },
+    },
+  })
   async metrics(): Promise<string> {
     return register.metrics();
   }
